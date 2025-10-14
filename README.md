@@ -103,9 +103,6 @@ If you want to keep the ability to run multiple firmwares on your Cardputer, you
     *   To view serial output, click on "Monitor" under the same "General" section.
     *   This will open a serial monitor showing debug information from the device.
 
-### Acknowledgements
-
-Special thanks to Gemini Code Assist for helping me solve coding challenges. My primary role in this project was to define the requirements and perform testing. Gemini Code Assist proved to be an excellent coding partner, especially when the software requirements and the methods for verifying them were clearly defined.
 ---
 
 <a name="中文"></a>
@@ -205,7 +202,3 @@ Special thanks to Gemini Code Assist for helping me solve coding challenges. My 
 7.  **监控输出**（可选）：
     *   要查看串行输出，点击同一 "通用" 部分下的 "Monitor"。
     *   这将打开一个串行监视器，显示来自设备的调试信息。
-
-### 致谢
-
-感谢Gemini Code Assist帮我解决代码问题，我参与的工作主要是提出需求和进行测试。当你明确知道软件需求以及如何验证这些需求是否得以很好的实现时，Gemini Code Assist是一个很棒的编码帮手。
