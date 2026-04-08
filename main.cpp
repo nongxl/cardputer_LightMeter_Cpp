@@ -601,6 +601,84 @@ void setup() {
   update_and_recalculate();
 }
 
+// --- 键盘事件处理 ---
+// 【修改说明】封装为独立的键盘处理函数 `handleInput()`
+// 1. 移除不兼容调用：删除了 `M5Cardputer.Keyboard.updateKeysState()` 和 `isChange()` 依赖
+// 2. 统一输入机制：由于外层 loop 已有 `M5Cardputer.update()` 读取状态，因此所有判断基于轮询直接处理。
+// 3. 边沿检测：由于 M5Cardputer.Keyboard 实际上没有提供 `wasPressed()` 方法，
+//    这里通过追踪历史状态并结合 `isKeyPressed()` 手动实现单次触发检测（边沿检测），解决跨设备兼容及防止长按重复触发带来的问题。
+void handleInput() {
+  // --- 1. 获取当前所有目标按键的状态 ---
+  bool curr_i = M5Cardputer.Keyboard.isKeyPressed('i');
+  bool curr_a = M5Cardputer.Keyboard.isKeyPressed('a');
+  bool curr_s = M5Cardputer.Keyboard.isKeyPressed('s');
+  bool curr_tab = M5Cardputer.Keyboard.isKeyPressed(KEY_TAB);
+  bool curr_up = M5Cardputer.Keyboard.isKeyPressed(UP_KEY_STR);
+  bool curr_down = M5Cardputer.Keyboard.isKeyPressed(DOWN_KEY_STR);
+
+  // --- 2. 使用静态变量追踪上一帧的状态 ---
+  static bool prev_i = false;
+  static bool prev_a = false;
+  static bool prev_s = false;
+  static bool prev_tab = false;
+  static bool prev_up = false;
+  static bool prev_down = false;
+
+  // --- 3. 计算单次按下边沿 (当前为 true 且 上一帧为 false) ---
+  bool pressed_i = curr_i && !prev_i;
+  bool pressed_a = curr_a && !prev_a;
+  bool pressed_s = curr_s && !prev_s;
+  bool pressed_tab = curr_tab && !prev_tab;
+  bool pressed_up = curr_up && !prev_up;
+  bool pressed_down = curr_down && !prev_down;
+
+  // --- 4. 更新上一帧状态等待下一次循环 ---
+  prev_i = curr_i;
+  prev_a = curr_a;
+  prev_s = curr_s;
+  prev_tab = curr_tab;
+  prev_up = curr_up;
+  prev_down = curr_down;
+
+  // --- 5. 处理具体的触发逻辑 ---
+  // 检查模式切换键
+  if (pressed_i) {
+    current_mode = 'i';
+    update_parameter_colors();
+    update_and_recalculate();
+  } else if (pressed_a) {
+    current_mode = 'a';
+    priority_mode = 'A';
+    update_parameter_colors();
+    update_and_recalculate();
+  } else if (pressed_s) {
+    current_mode = 's';
+    priority_mode = 'S';
+    update_parameter_colors();
+    update_and_recalculate();
+  } else if (pressed_tab) {
+    // Tab键循环切换i, a, s模式
+    if (current_mode == 'i') {
+      current_mode = 'a';
+      priority_mode = 'A';
+    } else if (current_mode == 'a') {
+      current_mode = 's';
+      priority_mode = 'S';
+    } else if (current_mode == 's') {
+      current_mode = 'i';
+    }
+    update_parameter_colors();
+    update_and_recalculate();
+  }
+  
+  // 检查滚动键 - 为匹配Python版本，仅使用点/分号进行滚动
+  if (pressed_up) {
+    scroll_list(-1);  // 向上滚动
+  } else if (pressed_down) {
+    scroll_list(1);  // 向下滚动
+  }
+}
+
 void loop() {
   M5Cardputer.update();
   
@@ -622,48 +700,7 @@ void loop() {
   
   } else {
       // --- 键盘事件处理 ---
-      // 更新键盘状态
-      M5Cardputer.Keyboard.updateKeysState();
-      
-      // 检查键盘变化
-      if (M5Cardputer.Keyboard.isChange()) {
-        // 检查模式切换键
-        if (M5Cardputer.Keyboard.isKeyPressed('i')) {
-          current_mode = 'i';
-          update_parameter_colors();
-          update_and_recalculate();
-        } else if (M5Cardputer.Keyboard.isKeyPressed('a')) {
-          current_mode = 'a';
-          priority_mode = 'A';
-          update_parameter_colors();
-          update_and_recalculate();
-        } else if (M5Cardputer.Keyboard.isKeyPressed('s')) {
-          current_mode = 's';
-          priority_mode = 'S';
-          update_parameter_colors();
-          update_and_recalculate();
-        } else if (M5Cardputer.Keyboard.isKeyPressed(KEY_TAB)) {
-          // Tab键循环切换i, a, s模式
-          if (current_mode == 'i') {
-            current_mode = 'a';
-            priority_mode = 'A';
-          } else if (current_mode == 'a') {
-            current_mode = 's';
-            priority_mode = 'S';
-          } else if (current_mode == 's') {
-            current_mode = 'i';
-          }
-          update_parameter_colors();
-          update_and_recalculate();
-        }
-        
-        // 检查滚动键 - 为匹配Python版本，仅使用点/分号进行滚动
-        if (M5Cardputer.Keyboard.isKeyPressed(UP_KEY_STR)) {
-          scroll_list(-1);  // 向上滚动
-        } else if (M5Cardputer.Keyboard.isKeyPressed(DOWN_KEY_STR)) {
-          scroll_list(1);  // 向下滚动
-        }
-      }
+      handleInput();
     
     // --- 传感器更新 ---
     // 仅在需要时更新电池显示以减少闪烁
