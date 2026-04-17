@@ -103,6 +103,10 @@ If you want to keep the ability to run multiple firmwares on your Cardputer, you
     *   To view serial output, click on "Monitor" under the same "General" section.
     *   This will open a serial monitor showing debug information from the device.
 
+### License
+
+This project is licensed under the PolyForm Noncommercial License 1.0.0 - see the [LICENSE](LICENSE) file for details.
+
 ---
 
 <a name="中文"></a>
@@ -202,3 +206,7 @@ If you want to keep the ability to run multiple firmwares on your Cardputer, you
 7.  **监控输出**（可选）：
     *   要查看串行输出，点击同一 "通用" 部分下的 "Monitor"。
     *   这将打开一个串行监视器，显示来自设备的调试信息。
+
+### 开源协议
+
+本项目采用 PolyForm Noncommercial License 1.0.0 协议授权 - 详情请参阅 [LICENSE](LICENSE) 文件。
