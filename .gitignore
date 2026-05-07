@@ -1,3 +1,5 @@
 .pio
 .vscode
 .venv
+doc
+prompt.txt
