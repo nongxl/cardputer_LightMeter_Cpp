@@ -126,6 +126,7 @@ int preview_indices[3] = {1, 4, 11};  // ISO, 光圈, 快门
 // 硬件相关对象
 M5Canvas *param_list_canvas;
 M5Canvas *left_panel_canvas;
+M5Canvas *title_bar_canvas;
 
 // 传感器对象
 M5_DLight *dlight_0 = nullptr;
@@ -549,42 +550,44 @@ void init_hardware() {
 
 // 更新调试标题
 void update_debug_title() {
-  // 清空标题栏区域
-  DISPLAY_CLASS.fillRect(0, 0, TITLE_BAR_WIDTH, TITLE_BAR_HEIGHT, COLOR_TITLE_BG);
-  
-  // 设置字体
-  DISPLAY_CLASS.setTextColor(COLOR_DEFAULT, COLOR_TITLE_BG);
-  DISPLAY_CLASS.setTextSize(TITLE_BAR_FONT_SIZE);
-  DISPLAY_CLASS.setFont(TITLE_BAR_FONT);
+  // 在画布上绘制
+  title_bar_canvas->fillScreen(COLOR_TITLE_BG);
+  title_bar_canvas->setTextColor(COLOR_DEFAULT, COLOR_TITLE_BG);
+  title_bar_canvas->setTextSize(TITLE_BAR_FONT_SIZE);
+  title_bar_canvas->setFont(TITLE_BAR_FONT);
   
   // 绘制标题
-  DISPLAY_CLASS.setCursor(TITLE_TEXT_X, TITLE_TEXT_Y);
+  title_bar_canvas->setCursor(TITLE_TEXT_X, TITLE_TEXT_Y);
   if (ev_locked) {
-    DISPLAY_CLASS.print("LightMeter [LOCK]");
+    title_bar_canvas->print("LightMeter [LOCK]");
   } else {
-    DISPLAY_CLASS.print("LightMeter       ");
+    title_bar_canvas->print("LightMeter");
   }
   
-  // 绘制电池标签（已注释掉）
-  //DISPLAY_CLASS.setCursor(BATTERY_LABEL_X, BATTERY_LABEL_Y);
-  //DISPLAY_CLASS.print("Battery:");
-  
   // 绘制电池电量
-  DISPLAY_CLASS.setCursor(BATTERY_PERCENT_X, BATTERY_PERCENT_Y);
-  DISPLAY_CLASS.print(String(POWER_CLASS.getBatteryLevel()) + "%");
+  title_bar_canvas->setCursor(BATTERY_PERCENT_X, BATTERY_PERCENT_Y);
+  title_bar_canvas->print(String(POWER_CLASS.getBatteryLevel()) + "%");
+  
+  // 将画布推送到显示屏
+  title_bar_canvas->pushSprite(0, 0);
 }
 
 void init_ui() {
+  // 创建标题栏画布
+  title_bar_canvas = new M5Canvas(&DISPLAY_CLASS);
+  title_bar_canvas->createSprite(TITLE_BAR_WIDTH, TITLE_BAR_HEIGHT);
+  
   // 使用调试标题初始化UI
   update_debug_title();
   
-  // 创建画布
+  // 创建参数列表画布
   param_list_canvas = new M5Canvas(&DISPLAY_CLASS);
   param_list_canvas->createSprite(PARAM_LIST_WIDTH, PARAM_LIST_HEIGHT);
   // 设置参数列表字体
   param_list_canvas->setFont(PARAM_LIST_FONT);
   param_list_canvas->setTextSize(PARAM_LIST_FONT_SIZE);
   
+  // 创建左侧面板画布
   left_panel_canvas = new M5Canvas(&DISPLAY_CLASS);
   left_panel_canvas->createSprite(LEFT_PANEL_WIDTH, LEFT_PANEL_HEIGHT);
   // 设置左侧面板字体
@@ -735,23 +738,25 @@ void loop() {
     // 仅在需要时更新电池显示以减少闪烁
     static unsigned long last_battery_update = 0;
     static uint8_t last_battery_level = 0;
-    uint8_t current_battery_level = POWER_CLASS.getBatteryLevel();
-    if (millis() - last_battery_update > 1000 || abs(current_battery_level - last_battery_level) > 1) {
+    
+    // 电池电量平滑处理
+    static float smoothed_battery_level = -1.0;
+    float raw_battery_level = static_cast<float>(POWER_CLASS.getBatteryLevel());
+    
+    // 初始化或进行低通滤波 (系数 0.1 表示新值占比 10%)
+    if (smoothed_battery_level < 0) {
+      smoothed_battery_level = raw_battery_level;
+    } else {
+      smoothed_battery_level = smoothed_battery_level * 0.9f + raw_battery_level * 0.1f;
+    }
+    
+    uint8_t current_battery_level = static_cast<uint8_t>(smoothed_battery_level + 0.5f); // 四舍五入
+    
+    if (millis() - last_battery_update > 2000 || current_battery_level != last_battery_level) {
       last_battery_update = millis();
       last_battery_level = current_battery_level;
-      // 仅清除电池区域
-      //DISPLAY_CLASS.fillRect(BATTERY_LABEL_X, 0, BATTERY_AREA_WIDTH, TITLE_BAR_HEIGHT, COLOR_TITLE_BG);
-      DISPLAY_CLASS.fillRect(BATTERY_PERCENT_X, 0, BATTERY_AREA_WIDTH, TITLE_BAR_HEIGHT, COLOR_TITLE_BG);
-      
-      // 使用与标题栏相同的字体设置
-      DISPLAY_CLASS.setTextColor(COLOR_DEFAULT, COLOR_TITLE_BG);
-      DISPLAY_CLASS.setTextSize(TITLE_BAR_FONT_SIZE); // 使用标题栏字体大小常量
-      DISPLAY_CLASS.setFont(TITLE_BAR_FONT);          // 使用标题栏字体类型常量
-      
-      //DISPLAY_CLASS.setCursor(BATTERY_LABEL_X, BATTERY_LABEL_Y);
-      //DISPLAY_CLASS.print("电量:");
-      DISPLAY_CLASS.setCursor(BATTERY_PERCENT_X, BATTERY_PERCENT_Y);
-      DISPLAY_CLASS.print(String(current_battery_level) + "%");
+      // 直接调用画布更新
+      update_debug_title();
     }
     
     // 降低传感器更新频率以减少闪烁
